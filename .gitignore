@@ -1,0 +1,12 @@
+# Build Artifacts
+bin
+obj
+publish
+
+# Visual Studio
+.vs
+*.user
+
+# Local Files
+[Dd]esktop.ini
+Thumbs.db

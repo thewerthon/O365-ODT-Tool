@@ -1,0 +1,14 @@
+# Text Files
+* text=auto eol=lf
+
+# Binaries Files
+*.dll binary
+*.exe binary
+*.ico binary
+*.png binary
+
+# Linguist Detectable
+* -linguist-detectable
+*.cs linguist-detectable
+*.ps1 linguist-detectable
+*.xaml linguist-detectable
