@@ -1,0 +1,41 @@
+<Configuration ID="5b6a0ee0-1f6e-4f37-9a4c-6f3b1c2d8e90">
+	<Info Description="Fixture exported by the web customization tool" />
+	<Add OfficeClientEdition="32" Channel="MonthlyEnterprise" MigrateArch="TRUE" SourcePath="\\server\share" AllowCdnFallback="TRUE">
+		<Product ID="O365ProPlusRetail">
+			<Language ID="en-us" />
+			<Language ID="pt-br" />
+			<ExcludeApp ID="Groove" />
+			<ExcludeApp ID="Lync" />
+			<ExcludeApp ID="Publisher" />
+		</Product>
+		<Product ID="VisioProRetail">
+			<Language ID="en-us" />
+			<Language ID="pt-br" />
+			<ExcludeApp ID="Groove" />
+			<ExcludeApp ID="Lync" />
+			<ExcludeApp ID="Publisher" />
+		</Product>
+		<Product ID="ProofingTools">
+			<Language ID="es-es" />
+		</Product>
+		<Product ID="AccessRuntimeRetail" CustomAttribute="kept">
+			<Language ID="en-us" />
+		</Product>
+	</Add>
+	<Property Name="SharedComputerLicensing" Value="1" />
+	<Property Name="FORCEAPPSHUTDOWN" Value="TRUE" />
+	<Property Name="DeviceBasedLicensing" Value="0" />
+	<Property Name="SCLCacheOverride" Value="0" />
+	<Updates Enabled="FALSE" Deadline="05/16/2026 18:30" />
+	<RemoveMSI>
+		<IgnoreProduct ID="InfoPath" />
+	</RemoveMSI>
+	<AppSettings>
+		<Setup Name="Company" Value="Contoso" />
+		<User Key="software\microsoft\office\16.0\excel\options" Name="defaultformat" Value="51" Type="REG_DWORD" App="excel16" Id="L_SaveExcelfilesas" />
+		<User Key="software\microsoft\office\16.0\word\options" Name="defaultformat" Value="" Type="REG_SZ" App="word16" Id="L_SaveWordfilesas" />
+	</AppSettings>
+	<Display Level="None" AcceptEULA="TRUE" />
+	<Logging Level="Standard" Path="%temp%\ODT" />
+	<CustomElement Foo="Bar" />
+</Configuration>

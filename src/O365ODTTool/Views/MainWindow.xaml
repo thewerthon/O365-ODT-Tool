@@ -1,0 +1,272 @@
+<ui:FluentWindow
+	x:Class="O365ODTTool.Views.MainWindow"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+	xmlns:vm="clr-namespace:O365ODTTool.ViewModels"
+	xmlns:converters="clr-namespace:O365ODTTool.Converters"
+	mc:Ignorable="d"
+	d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
+	Title="O365 ODT Tool"
+	Width="1200"
+	Height="900"
+	MinWidth="960"
+	MinHeight="640"
+	WindowStartupLocation="CenterScreen"
+	ExtendsContentIntoTitleBar="True"
+	WindowBackdropType="Mica"
+	WindowCornerPreference="Round">
+
+	<ui:FluentWindow.Resources>
+		<converters:EnumMatchConverter x:Key="EnumMatch" />
+		<converters:InverseBooleanConverter x:Key="InverseBoolean" />
+		<BooleanToVisibilityConverter x:Key="BooleanToVisibility" />
+
+		<Style x:Key="Card" TargetType="Border">
+			<Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+			<Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+			<Setter Property="BorderThickness" Value="1" />
+			<Setter Property="CornerRadius" Value="8" />
+			<Setter Property="Padding" Value="16,12,16,16" />
+			<Setter Property="Margin" Value="6" />
+		</Style>
+
+		<Style x:Key="CardTitle" TargetType="TextBlock">
+			<Setter Property="FontSize" Value="15" />
+			<Setter Property="FontWeight" Value="SemiBold" />
+			<Setter Property="Margin" Value="0,0,0,6" />
+			<Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+		</Style>
+
+		<Style x:Key="FieldLabel" TargetType="TextBlock">
+			<Setter Property="Margin" Value="0,10,0,4" />
+			<Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+		</Style>
+
+		<Style x:Key="Hint" TargetType="TextBlock">
+			<Setter Property="Margin" Value="0,8,0,0" />
+			<Setter Property="TextWrapping" Value="Wrap" />
+			<Setter Property="FontSize" Value="12" />
+			<Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+		</Style>
+
+		<Style x:Key="Monospace" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+			<Setter Property="FontFamily" Value="Cascadia Mono, Consolas" />
+			<Setter Property="FontSize" Value="12" />
+			<Setter Property="IsReadOnly" Value="True" />
+			<Setter Property="TextWrapping" Value="NoWrap" />
+			<Setter Property="AcceptsReturn" Value="True" />
+			<Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+			<Setter Property="HorizontalScrollBarVisibility" Value="Auto" />
+			<Setter Property="VerticalContentAlignment" Value="Top" />
+		</Style>
+
+		<DataTemplate x:Key="CheckItem" DataType="{x:Type vm:SelectableItem}">
+			<CheckBox Content="{Binding DisplayName}" IsChecked="{Binding IsSelected}" Margin="0,0,8,0" MinWidth="0" />
+		</DataTemplate>
+
+		<ItemsPanelTemplate x:Key="TwoColumns">
+			<UniformGrid Columns="2" />
+		</ItemsPanelTemplate>
+	</ui:FluentWindow.Resources>
+
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" MinHeight="200" />
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="190" MinHeight="120" />
+		</Grid.RowDefinitions>
+
+		<ui:TitleBar Grid.Row="0" Title="O365 ODT Tool" />
+
+		<Grid Grid.Row="1" Margin="12,4,12,6">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="*" />
+				<ColumnDefinition Width="Auto" />
+			</Grid.ColumnDefinitions>
+
+			<WrapPanel Grid.Column="0" VerticalAlignment="Center">
+				<ui:Button Content="Import XML" Icon="{ui:SymbolIcon ArrowImport24}" Command="{Binding ImportCommand}" Margin="0,0,6,0" />
+				<ui:Button Content="Export XML" Icon="{ui:SymbolIcon ArrowExportLtr24}" Command="{Binding ExportCommand}" Margin="0,0,6,0" />
+				<ui:Button Content="Save as O365ODTTool.xml" Icon="{ui:SymbolIcon Save24}" Command="{Binding SaveAsAutoImportCommand}" ToolTip="Saved next to the tool and imported automatically at startup" Margin="0,0,6,0" />
+				<ui:Button Content="Reset" Icon="{ui:SymbolIcon ArrowReset24}" Command="{Binding ResetCommand}" Appearance="Transparent" />
+			</WrapPanel>
+
+			<StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+				<ui:ProgressRing IsIndeterminate="True" Width="22" Height="22" Margin="0,0,10,0" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibility}}" />
+				<ui:Button Content="Cancel" Icon="{ui:SymbolIcon Dismiss24}" Command="{Binding CancelCommand}" Margin="0,0,6,0" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibility}}" />
+				<ui:Button Content="Download" Icon="{ui:SymbolIcon ArrowDownload24}" Command="{Binding DownloadCommand}" Margin="0,0,6,0" />
+				<ui:Button Content="Install" Icon="{ui:SymbolIcon Rocket24}" Command="{Binding InstallCommand}" Appearance="Primary" />
+			</StackPanel>
+		</Grid>
+
+		<ScrollViewer Grid.Row="2" Padding="6,0,6,6" VerticalScrollBarVisibility="Auto" IsEnabled="{Binding IsIdle}">
+			<Grid DataContext="{Binding Form}">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="*" />
+					<ColumnDefinition Width="*" />
+				</Grid.ColumnDefinitions>
+
+				<StackPanel Grid.Column="0">
+					<Border Style="{StaticResource Card}">
+						<StackPanel>
+							<TextBlock Style="{StaticResource CardTitle}" Text="Architecture" />
+							<StackPanel Orientation="Horizontal">
+								<RadioButton Content="64-bit" GroupName="Architecture" IsChecked="{Binding Architecture, Converter={StaticResource EnumMatch}, ConverterParameter=X64}" />
+								<RadioButton Content="32-bit" GroupName="Architecture" IsChecked="{Binding Architecture, Converter={StaticResource EnumMatch}, ConverterParameter=X86}" />
+							</StackPanel>
+							<CheckBox Content="Change the architecture of an existing installation" IsChecked="{Binding MigrateArchitecture}" Margin="0,8,0,0" />
+						</StackPanel>
+					</Border>
+
+					<Border Style="{StaticResource Card}">
+						<StackPanel>
+							<TextBlock Style="{StaticResource CardTitle}" Text="Products" />
+							<TextBlock Style="{StaticResource FieldLabel}" Text="Office suite" />
+							<ComboBox ItemsSource="{Binding SuiteOptions}" DisplayMemberPath="DisplayName" SelectedValuePath="Id" SelectedValue="{Binding SuiteProductId}" />
+							<ui:TextBox PlaceholderText="Product key (optional, KMS when empty)" Text="{Binding SuiteProductKey, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,0" Visibility="{Binding IsSuiteVolume, Converter={StaticResource BooleanToVisibility}}" />
+							<TextBlock Style="{StaticResource FieldLabel}" Text="Visio" />
+							<ComboBox ItemsSource="{Binding VisioOptions}" DisplayMemberPath="DisplayName" SelectedValuePath="Id" SelectedValue="{Binding VisioProductId}" />
+							<ui:TextBox PlaceholderText="Product key (optional, KMS when empty)" Text="{Binding VisioProductKey, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,0" Visibility="{Binding IsVisioVolume, Converter={StaticResource BooleanToVisibility}}" />
+							<TextBlock Style="{StaticResource FieldLabel}" Text="Project" />
+							<ComboBox ItemsSource="{Binding ProjectOptions}" DisplayMemberPath="DisplayName" SelectedValuePath="Id" SelectedValue="{Binding ProjectProductId}" />
+							<ui:TextBox PlaceholderText="Product key (optional, KMS when empty)" Text="{Binding ProjectProductKey, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,0" Visibility="{Binding IsProjectVolume, Converter={StaticResource BooleanToVisibility}}" />
+						</StackPanel>
+					</Border>
+
+					<Border Style="{StaticResource Card}">
+						<StackPanel>
+							<TextBlock Style="{StaticResource CardTitle}" Text="Update channel and version" />
+							<TextBlock Style="{StaticResource FieldLabel}" Text="Channel" />
+							<ComboBox ItemsSource="{Binding ChannelOptions}" DisplayMemberPath="DisplayName" SelectedValuePath="Id" SelectedValue="{Binding Channel}" />
+							<TextBlock Style="{StaticResource FieldLabel}" Text="Version" />
+							<StackPanel Orientation="Horizontal">
+								<RadioButton Content="Latest" GroupName="Version" IsChecked="{Binding IsSpecificVersion, Converter={StaticResource InverseBoolean}}" />
+								<RadioButton Content="Specific" GroupName="Version" IsChecked="{Binding IsSpecificVersion}" />
+							</StackPanel>
+							<ui:TextBox PlaceholderText="16.0.xxxxx.yyyyy" Text="{Binding Version, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsSpecificVersion}" Margin="0,6,0,0" />
+						</StackPanel>
+					</Border>
+
+					<Border Style="{StaticResource Card}">
+						<StackPanel>
+							<TextBlock Style="{StaticResource CardTitle}" Text="Applications" />
+							<TextBlock Style="{StaticResource Hint}" Margin="0,0,0,8" Text="Checked applications are installed; unchecked ones are excluded." />
+							<ItemsControl ItemsSource="{Binding Apps}" ItemTemplate="{StaticResource CheckItem}" ItemsPanel="{StaticResource TwoColumns}" />
+						</StackPanel>
+					</Border>
+				</StackPanel>
+
+				<StackPanel Grid.Column="1">
+					<Border Style="{StaticResource Card}">
+						<StackPanel>
+							<TextBlock Style="{StaticResource CardTitle}" Text="Languages" />
+							<TextBlock Style="{StaticResource FieldLabel}" Text="Primary language" />
+							<ComboBox ItemsSource="{Binding PrimaryLanguageOptions}" DisplayMemberPath="DisplayName" SelectedValuePath="Id" SelectedValue="{Binding PrimaryLanguage}" />
+							<TextBlock Style="{StaticResource FieldLabel}" Text="Additional languages" />
+							<Border BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Padding="8,4">
+								<ScrollViewer MaxHeight="150" VerticalScrollBarVisibility="Auto">
+									<ItemsControl ItemsSource="{Binding AdditionalLanguages}" ItemTemplate="{StaticResource CheckItem}" ItemsPanel="{StaticResource TwoColumns}" />
+								</ScrollViewer>
+							</Border>
+							<TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0" Text="{Binding AdditionalLanguagesSummary}" />
+							<TextBlock Style="{StaticResource FieldLabel}" Text="Proofing tools" />
+							<Border BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Padding="8,4">
+								<ScrollViewer MaxHeight="150" VerticalScrollBarVisibility="Auto">
+									<ItemsControl ItemsSource="{Binding ProofingLanguages}" ItemTemplate="{StaticResource CheckItem}" ItemsPanel="{StaticResource TwoColumns}" />
+								</ScrollViewer>
+							</Border>
+							<TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0" Text="{Binding ProofingLanguagesSummary}" />
+						</StackPanel>
+					</Border>
+
+					<Border Style="{StaticResource Card}">
+						<StackPanel>
+							<TextBlock Style="{StaticResource CardTitle}" Text="Installation" />
+							<TextBlock Style="{StaticResource FieldLabel}" Text="Setup interface" />
+							<StackPanel Orientation="Horizontal">
+								<RadioButton Content="Full" GroupName="DisplayLevel" IsChecked="{Binding DisplayLevel, Converter={StaticResource EnumMatch}, ConverterParameter=Full}" />
+								<RadioButton Content="Silent" GroupName="DisplayLevel" IsChecked="{Binding DisplayLevel, Converter={StaticResource EnumMatch}, ConverterParameter=None}" />
+							</StackPanel>
+							<CheckBox Content="Accept the license agreement" IsChecked="{Binding AcceptEula}" Margin="0,8,0,0" />
+							<CheckBox Content="Remove previous MSI versions of Office" IsChecked="{Binding RemoveMsi}" />
+							<CheckBox Content="Close running Office applications" IsChecked="{Binding ForceAppShutdown}" />
+							<CheckBox Content="Pin application icons to the taskbar" IsChecked="{Binding PinIconsToTaskbar}" />
+							<TextBlock Style="{StaticResource FieldLabel}" Text="Download folder" />
+							<Grid DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="*" />
+									<ColumnDefinition Width="Auto" />
+								</Grid.ColumnDefinitions>
+								<ui:TextBox Grid.Column="0" Text="{Binding DownloadFolder, UpdateSourceTrigger=PropertyChanged}" />
+								<ui:Button Grid.Column="1" Icon="{ui:SymbolIcon FolderOpen24}" Command="{Binding BrowseDownloadFolderCommand}" ToolTip="Browse" Margin="6,0,0,0" VerticalAlignment="Stretch" />
+							</Grid>
+							<TextBlock Style="{StaticResource Hint}" Text="Installation always uses the Office CDN. Download saves the files, setup.exe and configuration.xml into the folder above for offline use." />
+						</StackPanel>
+					</Border>
+
+					<Border Style="{StaticResource Card}">
+						<StackPanel>
+							<TextBlock Style="{StaticResource CardTitle}" Text="Updates" />
+							<ui:ToggleSwitch Content="Update Office automatically" IsChecked="{Binding UpdatesEnabled}" />
+						</StackPanel>
+					</Border>
+
+					<Border Style="{StaticResource Card}">
+						<StackPanel>
+							<TextBlock Style="{StaticResource CardTitle}" Text="Licensing and activation" />
+							<RadioButton Content="User based" GroupName="Licensing" IsChecked="{Binding Licensing, Converter={StaticResource EnumMatch}, ConverterParameter=UserBased}" />
+							<RadioButton Content="Shared computer" GroupName="Licensing" IsChecked="{Binding Licensing, Converter={StaticResource EnumMatch}, ConverterParameter=SharedComputer}" />
+							<RadioButton Content="Device based" GroupName="Licensing" IsChecked="{Binding Licensing, Converter={StaticResource EnumMatch}, ConverterParameter=DeviceBased}" />
+							<CheckBox Content="Activate volume products automatically" IsChecked="{Binding AutoActivate}" Margin="0,8,0,0" />
+						</StackPanel>
+					</Border>
+
+					<Border Style="{StaticResource Card}">
+						<StackPanel>
+							<TextBlock Style="{StaticResource CardTitle}" Text="General" />
+							<TextBlock Style="{StaticResource FieldLabel}" Text="Organization name" />
+							<ui:TextBox Text="{Binding Company, UpdateSourceTrigger=PropertyChanged}" />
+							<TextBlock Style="{StaticResource FieldLabel}" Text="Description" />
+							<ui:TextBox Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}" />
+						</StackPanel>
+					</Border>
+				</StackPanel>
+			</Grid>
+		</ScrollViewer>
+
+		<GridSplitter Grid.Row="3" Height="6" HorizontalAlignment="Stretch" Background="Transparent" ResizeDirection="Rows" />
+
+		<Grid Grid.Row="4" Margin="12,0,12,8">
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="*" />
+				<RowDefinition Height="Auto" />
+			</Grid.RowDefinitions>
+
+			<ui:InfoBar Grid.Row="0" Title="Validation" Message="{Binding ValidationMessage}" Severity="{Binding ValidationSeverity}" IsOpen="{Binding HasValidationIssues}" IsClosable="False" Margin="0,0,0,6" />
+
+			<TabControl Grid.Row="1">
+				<TabItem Header="Log">
+					<Grid>
+						<TextBox x:Name="LogTextBox" Style="{StaticResource Monospace}" Text="{Binding LogText, Mode=OneWay}" TextChanged="OnLogTextChanged" />
+						<ui:Button Content="Clear" Command="{Binding ClearLogCommand}" Appearance="Transparent" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,20,0" />
+					</Grid>
+				</TabItem>
+				<TabItem Header="XML preview">
+					<TextBox Style="{StaticResource Monospace}" Text="{Binding XmlPreview, Mode=OneWay}" />
+				</TabItem>
+			</TabControl>
+
+			<WrapPanel Grid.Row="2" Margin="2,6,0,0">
+				<TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}" FontSize="12" Text="{Binding SourceDescription, StringFormat=Source: {0}}" Margin="0,0,16,0" />
+				<TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}" FontSize="12" Text="{Binding SetupStatus}" Margin="0,0,16,0" />
+				<TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}" FontSize="12" Text="{Binding PreservedSummary}" Visibility="{Binding HasPreservedContent, Converter={StaticResource BooleanToVisibility}}" />
+			</WrapPanel>
+		</Grid>
+	</Grid>
+</ui:FluentWindow>

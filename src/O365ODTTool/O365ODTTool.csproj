@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<UseWPF>true</UseWPF>
+		<RootNamespace>O365ODTTool</RootNamespace>
+		<AssemblyName>O365ODTTool</AssemblyName>
+		<ApplicationManifest>app.manifest</ApplicationManifest>
+		<!-- Costura resolves the embedded dependencies at runtime, so no .exe.config is needed next to the single executable. -->
+		<AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
+		<GenerateSupportedRuntime>false</GenerateSupportedRuntime>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)' == 'Release'">
+		<DebugType>none</DebugType>
+		<GenerateDocumentationFile>false</GenerateDocumentationFile>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Reference Include="System.Net.Http" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\O365ODTTool.Core\O365ODTTool.Core.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+		<PackageReference Include="Costura.Fody" Version="6.2.0" PrivateAssets="all" />
+		<PackageReference Include="WPF-UI" Version="4.3.0" />
+	</ItemGroup>
+
+</Project>

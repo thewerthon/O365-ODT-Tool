@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/O365ODTTool.Core/O365ODTTool.Core.csproj" />
+    <Project Path="src/O365ODTTool/O365ODTTool.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/O365ODTTool.Core.Tests/O365ODTTool.Core.Tests.csproj" />
+  </Folder>
+</Solution>

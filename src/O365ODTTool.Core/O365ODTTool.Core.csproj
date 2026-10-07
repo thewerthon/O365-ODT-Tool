@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<RootNamespace>O365ODTTool.Core</RootNamespace>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Reference Include="System.Net.Http" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="O365ODTTool.Core.Tests" />
+	</ItemGroup>
+
+</Project>
