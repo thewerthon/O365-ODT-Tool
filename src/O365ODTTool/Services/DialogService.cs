@@ -53,9 +53,6 @@ public sealed class DialogService : IDialogService {
 	}
 
 	/// <inheritdoc />
-	public string? PickFolder(string initialFolder) => FolderPicker.Pick(initialFolder);
-
-	/// <inheritdoc />
 	public async Task ShowMessageAsync(string title, string message) {
 
 		var messageBox = new MessageBox {

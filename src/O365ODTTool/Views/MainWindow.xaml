@@ -90,7 +90,7 @@
 					<TextBlock Text="{Binding BusyText}" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
 					<ui:Button Content="Cancel" Icon="{ui:SymbolIcon Dismiss24}" Command="{Binding CancelCommand}" ToolTip="Cancel the running operation" Margin="0,0,6,0" />
 				</StackPanel>
-				<ui:Button Content="Download" Icon="{ui:SymbolIcon ArrowDownload24}" Command="{Binding DownloadCommand}" ToolTip="Download Office installation files to a folder" Margin="0,0,6,0" />
+				<ui:Button Content="Download" Icon="{ui:SymbolIcon ArrowDownload24}" Command="{Binding DownloadCommand}" ToolTip="Download Office to reuse in later installations" Margin="0,0,6,0" />
 				<ui:Button Content="Install" Icon="{ui:SymbolIcon Rocket24}" Command="{Binding InstallCommand}" ToolTip="Install Office on this computer" Appearance="Primary" />
 			</StackPanel>
 		</Grid>

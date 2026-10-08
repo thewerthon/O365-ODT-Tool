@@ -16,11 +16,6 @@ public interface IDialogService {
 	string? SaveXmlFile(string initialFolder, string defaultFileName);
 
 	/// <summary>
-	/// Asks for a folder, returning <see langword="null"/> when cancelled.
-	/// </summary>
-	string? PickFolder(string initialFolder);
-
-	/// <summary>
 	/// Shows an informational message.
 	/// </summary>
 	Task ShowMessageAsync(string title, string message);

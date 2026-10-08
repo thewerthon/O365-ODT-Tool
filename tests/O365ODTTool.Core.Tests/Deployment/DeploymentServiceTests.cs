@@ -107,62 +107,30 @@ public sealed class DeploymentServiceTests : IDisposable {
 
 	}
 
-	[Fact]
-	public async Task DownloadAsync_RunsDownloadIntoTargetFolder() {
+[Fact]
+public async Task DownloadAsync_DownloadsIntoLocalSourceFolder() {
 
-		var target = folder.Combine("download");
+var exitCode = await CreateService().DownloadAsync(new OfficeConfiguration { Channel = "Current", SourcePath = @"\\server\share" }, new SynchronousProgress(), CancellationToken.None);
 
-		var exitCode = await CreateService().DownloadAsync(new OfficeConfiguration { Channel = "Current" }, target, new SynchronousProgress(), CancellationToken.None);
+var request = Assert.Single(processRunner.Requests);
 
-		var request = Assert.Single(processRunner.Requests);
+Assert.Equal(0, exitCode);
+Assert.StartsWith("/download \"", request.Arguments, StringComparison.Ordinal);
+Assert.Equal(ToolFolder, reader.Read(processRunner.Configurations.Single()).SourcePath);
+Assert.Equal([SetupPath], Directory.GetFiles(ToolFolder));
 
-		Assert.Equal(0, exitCode);
-		Assert.StartsWith("/download \"", request.Arguments, StringComparison.Ordinal);
-		Assert.Equal(target, reader.Read(processRunner.Configurations.Single()).SourcePath);
+}
 
-	}
+[Fact]
+public async Task DownloadAsync_DoesNotChangeInputConfiguration() {
 
-	[Fact]
-	public async Task DownloadAsync_PreparesPortableOfflineInstallation() {
+var configuration = new OfficeConfiguration { Channel = "Current" };
 
-		var target = folder.Combine("download");
+await CreateService().DownloadAsync(configuration, new SynchronousProgress(), CancellationToken.None);
 
-		await CreateService().DownloadAsync(new OfficeConfiguration { Channel = "Current", SourcePath = @"\\server\share" }, target, new SynchronousProgress(), CancellationToken.None);
+Assert.Null(configuration.SourcePath);
 
-		var offlineConfiguration = reader.ReadFile(Path.Combine(target, DeploymentService.OfflineConfigurationFileName));
-		var script = File.ReadAllText(Path.Combine(target, DeploymentService.OfflineInstallScriptFileName));
-
-		Assert.Null(offlineConfiguration.SourcePath);
-		Assert.Equal("Current", offlineConfiguration.Channel);
-		Assert.Equal(setupContent, File.ReadAllBytes(Path.Combine(target, SetupProvider.SetupFileName)));
-		Assert.Contains($"\"%~dp0{SetupProvider.SetupFileName}\" /configure \"%~dp0{DeploymentService.OfflineConfigurationFileName}\"", script, StringComparison.Ordinal);
-
-	}
-
-	[Fact]
-	public async Task DownloadAsync_SkipsOfflineInstallationOnFailure() {
-
-		var target = folder.Combine("download");
-
-		processRunner.ExitCode = 17002;
-
-		var exitCode = await CreateService().DownloadAsync(new OfficeConfiguration(), target, new SynchronousProgress(), CancellationToken.None);
-
-		Assert.Equal(17002, exitCode);
-		Assert.Empty(Directory.GetFiles(target));
-
-	}
-
-	[Fact]
-	public async Task DownloadAsync_DoesNotChangeInputConfiguration() {
-
-		var configuration = new OfficeConfiguration { Channel = "Current" };
-
-		await CreateService().DownloadAsync(configuration, folder.Combine("download"), new SynchronousProgress(), CancellationToken.None);
-
-		Assert.Null(configuration.SourcePath);
-
-	}
+}
 
 	[Fact]
 	public async Task InstallAsync_ReportsExitCodeDescription() {

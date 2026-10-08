@@ -28,7 +28,7 @@ public sealed partial class MainViewModel : ObservableObject {
 	private const string downloadingText = "Downloading…";
 	private const string installingText = "Installing…";
 	private const string cancelingText = "Canceling…";
-	private const string downloadedMessage = "Download completed. To install offline, run {1} from {0}.";
+	private const string downloadedMessage = "Download completed. Installations will reuse the downloaded files.";
 	private const string installedMessage = "Installation completed.";
 	private const string savedMessage = "Saved to {0}";
 
@@ -43,7 +43,6 @@ public sealed partial class MainViewModel : ObservableObject {
 
 	private OfficeConfiguration? baseConfiguration;
 	private CancellationTokenSource? cancellation;
-	private string? lastDownloadFolder;
 
 	/// <summary>
 	/// Initializes the view model with its services.
@@ -155,15 +154,7 @@ public sealed partial class MainViewModel : ObservableObject {
 
 		if (configuration is null) return;
 
-		var folder = dialogs.PickFolder(lastDownloadFolder ?? paths.ToolFolder);
-
-		if (folder is null) return;
-
-		lastDownloadFolder = folder;
-
-		var successMessage = string.Format(downloadedMessage, folder, DeploymentService.OfflineInstallScriptFileName);
-
-		await RunSetupAsync(downloadTitle, downloadingText, successMessage, token => deploymentService.DownloadAsync(configuration, folder, setupLog, token));
+		await RunSetupAsync(downloadTitle, downloadingText, downloadedMessage, token => deploymentService.DownloadAsync(configuration, setupLog, token));
 
 	}
 
