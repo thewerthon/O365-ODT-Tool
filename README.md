@@ -10,7 +10,7 @@ All deployment choices sit in one form window that follows the Windows light or 
 - **Import**: loads any ODT configuration XML into the form. Options not shown in the form (app preferences, version, source path, and so on) are preserved and passed to setup.
 - **Auto-import**: loads `O365ODTTool.xml` from the executable folder at startup.
 - **Export, Preview, Save**: saves the configuration XML anywhere, shows it, or saves it as `O365ODTTool.xml` next to the executable.
-- **Download**: asks for a folder and runs `setup.exe /download` into it.
+- **Download**: asks for a folder, runs `setup.exe /download` into it, then adds `setup.exe`, `configuration.xml`, and `Install.cmd` so the folder installs offline from wherever it is copied.
 - **Install**: runs `setup.exe /configure`.
 - **Setup**: uses `setup.exe` next to the executable when present; otherwise downloads the official one into `%TEMP%\O365ODTTool`. Only files signed by Microsoft are accepted.
 

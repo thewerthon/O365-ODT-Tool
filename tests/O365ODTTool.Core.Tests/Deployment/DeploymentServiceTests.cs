@@ -8,11 +8,18 @@ namespace O365ODTTool.Core.Tests.Deployment;
 
 public sealed class DeploymentServiceTests : IDisposable {
 
-	private const string setupPath = @"C:\Foo\setup.exe";
+	private static readonly byte[] setupContent = [1, 2, 3];
 
 	private readonly TemporaryFolder folder = new();
 	private readonly FakeProcessRunner processRunner = new();
 	private readonly ConfigurationReader reader = new();
+
+	public DeploymentServiceTests() {
+
+		Directory.CreateDirectory(ToolFolder);
+		File.WriteAllBytes(SetupPath, setupContent);
+
+	}
 
 	[Fact]
 	public async Task InstallAsync_RunsConfigureWithTransientFile() {
@@ -22,7 +29,7 @@ public sealed class DeploymentServiceTests : IDisposable {
 		var request = Assert.Single(processRunner.Requests);
 
 		Assert.Equal(0, exitCode);
-		Assert.Equal(setupPath, request.FileName);
+		Assert.Equal(SetupPath, request.FileName);
 		Assert.StartsWith("/configure \"", request.Arguments, StringComparison.Ordinal);
 		Assert.Equal("Current", reader.Read(processRunner.Configurations.Single()).Channel);
 		Assert.Empty(Directory.GetFiles(TemporaryFolder));
@@ -50,7 +57,36 @@ public sealed class DeploymentServiceTests : IDisposable {
 		Assert.Equal(0, exitCode);
 		Assert.StartsWith("/download \"", request.Arguments, StringComparison.Ordinal);
 		Assert.Equal(target, reader.Read(processRunner.Configurations.Single()).SourcePath);
-		Assert.True(Directory.Exists(target));
+
+	}
+
+	[Fact]
+	public async Task DownloadAsync_PreparesPortableOfflineInstallation() {
+
+		var target = folder.Combine("download");
+
+		await CreateService().DownloadAsync(new OfficeConfiguration { Channel = "Current", SourcePath = @"\\server\share" }, target, new SynchronousProgress(), CancellationToken.None);
+
+		var offlineConfiguration = reader.ReadFile(Path.Combine(target, DeploymentService.OfflineConfigurationFileName));
+		var script = File.ReadAllText(Path.Combine(target, DeploymentService.OfflineInstallScriptFileName));
+
+		Assert.Null(offlineConfiguration.SourcePath);
+		Assert.Equal("Current", offlineConfiguration.Channel);
+		Assert.Equal(setupContent, File.ReadAllBytes(Path.Combine(target, SetupProvider.SetupFileName)));
+		Assert.Contains($"\"%~dp0{SetupProvider.SetupFileName}\" /configure \"%~dp0{DeploymentService.OfflineConfigurationFileName}\"", script, StringComparison.Ordinal);
+
+	}
+
+	[Fact]
+	public async Task DownloadAsync_SkipsOfflineInstallationOnFailure() {
+
+		var target = folder.Combine("download");
+
+		processRunner.ExitCode = 17002;
+
+		var exitCode = await CreateService().DownloadAsync(new OfficeConfiguration(), target, new SynchronousProgress(), CancellationToken.None);
+
+		Assert.Equal(17002, exitCode);
 		Assert.Empty(Directory.GetFiles(target));
 
 	}
@@ -82,13 +118,17 @@ public sealed class DeploymentServiceTests : IDisposable {
 
 	public void Dispose() => folder.Dispose();
 
+	private string ToolFolder => folder.Combine("tool");
+
+	private string SetupPath => Path.Combine(ToolFolder, SetupProvider.SetupFileName);
+
 	private string TemporaryFolder => folder.Combine("temp");
 
-	private DeploymentService CreateService() => new(new FakeSetupProvider(), processRunner, new ConfigurationWriter(), TemporaryFolder);
+	private DeploymentService CreateService() => new(new FakeSetupProvider(SetupPath), processRunner, new ConfigurationWriter(), TemporaryFolder);
 
-	private sealed class FakeSetupProvider : ISetupProvider {
+	private sealed class FakeSetupProvider(string path) : ISetupProvider {
 
-		public Task<string> EnsureSetupAsync(IProgress<string> log, CancellationToken cancellationToken) => Task.FromResult(setupPath);
+		public Task<string> EnsureSetupAsync(IProgress<string> log, CancellationToken cancellationToken) => Task.FromResult(path);
 
 	}
 

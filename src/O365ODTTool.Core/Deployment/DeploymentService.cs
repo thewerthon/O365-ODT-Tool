@@ -13,11 +13,23 @@ namespace O365ODTTool.Core.Deployment;
 /// <param name="temporaryFolder">The folder that holds the transient configuration files.</param>
 public sealed class DeploymentService(ISetupProvider setupProvider, IProcessRunner processRunner, IConfigurationWriter writer, string temporaryFolder) : IDeploymentService {
 
+	/// <summary>The configuration file name written into download folders.</summary>
+	public const string OfflineConfigurationFileName = "configuration.xml";
+
+	/// <summary>The installation script file name written into download folders.</summary>
+	public const string OfflineInstallScriptFileName = "Install.cmd";
+
 	private const string downloadSwitch = "/download";
 	private const string configureSwitch = "/configure";
 
+	// Without a source path, setup installs from the files next to it, so the folder works wherever it is copied.
+	private static readonly string offlineInstallScript = string.Join("\r\n",
+		"@echo off",
+		$"\"%~dp0{SetupProvider.SetupFileName}\" {configureSwitch} \"%~dp0{OfflineConfigurationFileName}\"",
+		string.Empty);
+
 	/// <inheritdoc />
-	public Task<int> DownloadAsync(OfficeConfiguration configuration, string targetFolder, IProgress<string> log, CancellationToken cancellationToken) {
+	public async Task<int> DownloadAsync(OfficeConfiguration configuration, string targetFolder, IProgress<string> log, CancellationToken cancellationToken) {
 
 		var folder = Path.GetFullPath(targetFolder);
 
@@ -27,16 +39,27 @@ public sealed class DeploymentService(ISetupProvider setupProvider, IProcessRunn
 
 		downloadConfiguration.SourcePath = folder;
 
-		return RunAsync(SetupMode.Download, downloadConfiguration, log, cancellationToken);
+		var setupPath = await setupProvider.EnsureSetupAsync(log, cancellationToken).ConfigureAwait(false);
+		var exitCode = await RunAsync(setupPath, SetupMode.Download, downloadConfiguration, log, cancellationToken).ConfigureAwait(false);
+
+		if (exitCode == SetupExitCodes.Success) PrepareOfflineInstallation(configuration, setupPath, folder, log);
+
+		return exitCode;
 
 	}
 
 	/// <inheritdoc />
-	public Task<int> InstallAsync(OfficeConfiguration configuration, IProgress<string> log, CancellationToken cancellationToken) => RunAsync(SetupMode.Configure, configuration, log, cancellationToken);
-
-	private async Task<int> RunAsync(SetupMode mode, OfficeConfiguration configuration, IProgress<string> log, CancellationToken cancellationToken) {
+	public async Task<int> InstallAsync(OfficeConfiguration configuration, IProgress<string> log, CancellationToken cancellationToken) {
 
 		var setupPath = await setupProvider.EnsureSetupAsync(log, cancellationToken).ConfigureAwait(false);
+
+		return await RunAsync(setupPath, SetupMode.Configure, configuration, log, cancellationToken).ConfigureAwait(false);
+
+	}
+
+	private static bool IsSamePath(string first, string second) => string.Equals(Path.GetFullPath(first), Path.GetFullPath(second), StringComparison.OrdinalIgnoreCase);
+
+	private async Task<int> RunAsync(string setupPath, SetupMode mode, OfficeConfiguration configuration, IProgress<string> log, CancellationToken cancellationToken) {
 
 		Directory.CreateDirectory(temporaryFolder);
 
@@ -65,6 +88,22 @@ public sealed class DeploymentService(ISetupProvider setupProvider, IProcessRunn
 			File.Delete(configurationPath);
 
 		}
+
+	}
+
+	private void PrepareOfflineInstallation(OfficeConfiguration configuration, string setupPath, string folder, IProgress<string> log) {
+
+		var offlineConfiguration = configuration.Clone();
+		var setupTarget = Path.Combine(folder, SetupProvider.SetupFileName);
+
+		offlineConfiguration.SourcePath = null;
+
+		if (!IsSamePath(setupPath, setupTarget)) File.Copy(setupPath, setupTarget, overwrite: true);
+
+		writer.WriteFile(offlineConfiguration, Path.Combine(folder, OfflineConfigurationFileName));
+		File.WriteAllText(Path.Combine(folder, OfflineInstallScriptFileName), offlineInstallScript);
+
+		log.Report($"Offline installation ready in {folder}");
 
 	}
 

@@ -27,6 +27,9 @@ public sealed partial class MainViewModel : ObservableObject {
 	private const string invalidTitle = "Invalid configuration";
 	private const string downloadingText = "Downloading…";
 	private const string installingText = "Installing…";
+	private const string cancelingText = "Canceling…";
+	private const string downloadedMessage = "Download completed. To install offline, run {1} from {0}.";
+	private const string installedMessage = "Installation completed.";
 	private const string savedMessage = "Saved to {0}";
 
 	private readonly IConfigurationReader reader;
@@ -80,12 +83,21 @@ public sealed partial class MainViewModel : ObservableObject {
 
 	/// <summary>Gets whether a setup operation is running.</summary>
 	[ObservableProperty]
-	[NotifyPropertyChangedFor(nameof(IsIdle))]
+	[NotifyPropertyChangedFor(nameof(IsIdle), nameof(CanCancel))]
 	[NotifyCanExecuteChangedFor(nameof(ImportCommand), nameof(ExportCommand), nameof(PreviewCommand), nameof(SaveCommand), nameof(ResetCommand), nameof(DownloadCommand), nameof(InstallCommand), nameof(CancelCommand))]
 	public partial bool IsBusy { get; private set; }
 
+	/// <summary>Gets whether cancellation of the running operation was requested.</summary>
+	[ObservableProperty]
+	[NotifyPropertyChangedFor(nameof(CanCancel))]
+	[NotifyCanExecuteChangedFor(nameof(CancelCommand))]
+	public partial bool IsCanceling { get; private set; }
+
 	/// <summary>Gets whether no setup operation is running.</summary>
 	public bool IsIdle => !IsBusy;
+
+	/// <summary>Gets whether the running operation can be cancelled.</summary>
+	public bool CanCancel => IsBusy && !IsCanceling;
 
 	/// <summary>
 	/// Loads the automatic import file when present, or the default choices otherwise.
@@ -149,7 +161,9 @@ public sealed partial class MainViewModel : ObservableObject {
 
 		lastDownloadFolder = folder;
 
-		await RunSetupAsync(downloadTitle, downloadingText, token => deploymentService.DownloadAsync(configuration, folder, setupLog, token));
+		var successMessage = string.Format(downloadedMessage, folder, DeploymentService.OfflineInstallScriptFileName);
+
+		await RunSetupAsync(downloadTitle, downloadingText, successMessage, token => deploymentService.DownloadAsync(configuration, folder, setupLog, token));
 
 	}
 
@@ -162,12 +176,19 @@ public sealed partial class MainViewModel : ObservableObject {
 
 		if (!await dialogs.ConfirmAsync(installTitle, "Office will be installed or reconfigured on this computer. Continue?", installTitle)) return;
 
-		await RunSetupAsync(installTitle, installingText, token => deploymentService.InstallAsync(configuration, setupLog, token));
+		await RunSetupAsync(installTitle, installingText, installedMessage, token => deploymentService.InstallAsync(configuration, setupLog, token));
 
 	}
 
-	[RelayCommand(CanExecute = nameof(IsBusy))]
-	private void Cancel() => cancellation?.Cancel();
+	[RelayCommand(CanExecute = nameof(CanCancel))]
+	private void Cancel() {
+
+		BusyText = cancelingText;
+		IsCanceling = true;
+
+		cancellation?.Cancel();
+
+	}
 
 	private OfficeConfiguration BuildConfiguration() => mapper.ToConfiguration(Form.ToOptions(), baseConfiguration);
 
@@ -219,7 +240,7 @@ public sealed partial class MainViewModel : ObservableObject {
 
 	}
 
-	private async Task RunSetupAsync(string title, string busyText, Func<CancellationToken, Task<int>> operation) {
+	private async Task RunSetupAsync(string title, string busyText, string successMessage, Func<CancellationToken, Task<int>> operation) {
 
 		IsBusy = true;
 		BusyText = busyText;
@@ -229,7 +250,7 @@ public sealed partial class MainViewModel : ObservableObject {
 
 			var exitCode = await operation(cancellation.Token);
 
-			await dialogs.ShowMessageAsync(title, SetupExitCodes.Describe(exitCode));
+			await dialogs.ShowMessageAsync(title, exitCode == SetupExitCodes.Success ? successMessage : SetupExitCodes.Describe(exitCode));
 
 		} catch (OperationCanceledException) {
 
@@ -244,6 +265,7 @@ public sealed partial class MainViewModel : ObservableObject {
 			cancellation.Dispose();
 			cancellation = null;
 			BusyText = string.Empty;
+			IsCanceling = false;
 			IsBusy = false;
 
 		}
