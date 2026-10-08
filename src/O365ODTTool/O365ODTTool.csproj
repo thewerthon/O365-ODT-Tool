@@ -6,6 +6,7 @@
 		<RootNamespace>O365ODTTool</RootNamespace>
 		<AssemblyName>O365ODTTool</AssemblyName>
 		<ApplicationManifest>app.manifest</ApplicationManifest>
+		<ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
 		<!-- Costura resolves the embedded dependencies at runtime, so no .exe.config is needed next to the single executable. -->
 		<AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
 		<GenerateSupportedRuntime>false</GenerateSupportedRuntime>
@@ -18,6 +19,10 @@
 
 	<ItemGroup>
 		<Reference Include="System.Net.Http" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Resource Include="Assets\AppIcon.ico" />
 	</ItemGroup>
 
 	<ItemGroup>

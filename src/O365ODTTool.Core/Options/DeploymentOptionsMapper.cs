@@ -37,7 +37,6 @@ public sealed class DeploymentOptionsMapper : IDeploymentOptionsMapper {
 			ProjectProductId = project?.Id,
 			ProjectProductKey = project?.ProductKey,
 			Channel = ChannelCatalog.Find(configuration.Channel)?.Id ?? ProductCatalog.Find(primaryProduct?.Id)?.RequiredChannel ?? defaults.Channel,
-			Version = NullIfBlank(configuration.Version),
 			ExcludedApps = primaryProduct is null ? defaults.ExcludedApps : new HashSet<string>(primaryProduct.ExcludedApps.Select(NormalizeApp), StringComparer.OrdinalIgnoreCase),
 			PrimaryLanguage = languages.FirstOrDefault() ?? defaults.PrimaryLanguage,
 			AdditionalLanguages = languages.Skip(1).ToList(),
@@ -115,13 +114,7 @@ public sealed class DeploymentOptionsMapper : IDeploymentOptionsMapper {
 
 		configuration.OfficeClientEdition = options.Architecture == OfficeArchitecture.X86 ? x86Edition : x64Edition;
 		configuration.Channel = options.Channel;
-		configuration.Version = NullIfBlank(options.Version);
 		configuration.MigrateArchitecture = options.MigrateArchitecture ? true : null;
-
-		// Installation always comes from the content delivery network, so local source settings are dropped.
-		configuration.SourcePath = null;
-		configuration.DownloadPath = null;
-		configuration.AllowCdnFallback = null;
 
 	}
 

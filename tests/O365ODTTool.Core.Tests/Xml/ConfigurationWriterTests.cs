@@ -33,6 +33,19 @@ public sealed class ConfigurationWriterTests {
 	}
 
 	[Fact]
+	public void Write_ReindentsImportedContentConsistently() {
+
+		var configuration = reader.Read("<Configuration>\n\t\t<Add Channel=\"Current\">\n\t\t\t<Product ID=\"Foo\" />\n\t\t</Add>\n</Configuration>");
+
+		configuration.SetProperty("Bar", "1");
+
+		var expected = string.Join(Environment.NewLine, "<Configuration>", "  <Add Channel=\"Current\">", "    <Product ID=\"Foo\" />", "  </Add>", "  <Property Name=\"Bar\" Value=\"1\" />", "</Configuration>");
+
+		Assert.Equal(expected, writer.Write(configuration));
+
+	}
+
+	[Fact]
 	public void WriteFile_CreatesFolderAndWritesWithoutByteOrderMark() {
 
 		using var folder = new TemporaryFolder();

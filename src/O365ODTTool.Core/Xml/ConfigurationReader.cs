@@ -13,6 +13,7 @@ public sealed class ConfigurationReader : IConfigurationReader {
 		DtdProcessing = DtdProcessing.Prohibit,
 		XmlResolver = null,
 		IgnoreComments = false,
+		IgnoreWhitespace = true,
 	};
 
 	/// <inheritdoc />

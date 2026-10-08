@@ -29,6 +29,8 @@ public sealed class DeploymentOptionsMapperTests {
 		Assert.True(configuration.UpdatesEnabled);
 		Assert.Equal("Full", configuration.DisplayLevel);
 		Assert.True(configuration.AcceptEula);
+		Assert.Null(configuration.Version);
+		Assert.Equal("TRUE", configuration.GetProperty(OdtPropertyNames.ForceAppShutdown));
 		Assert.Equal("0", configuration.GetProperty(OdtPropertyNames.SharedComputerLicensing));
 		Assert.Null(configuration.GetProperty(OdtPropertyNames.AutoActivate));
 
@@ -98,14 +100,28 @@ public sealed class DeploymentOptionsMapperTests {
 	}
 
 	[Fact]
-	public void ToConfiguration_DropsLocalSourceOfBase() {
+	public void ToConfiguration_KeepsSourceAndVersionOfBase() {
 
 		var baseConfiguration = reader.Read(FixtureLoader.Read(FixtureLoader.OfficeCustomizationTool));
 
+		baseConfiguration.Version = "16.0.17928.20156";
+
 		var configuration = mapper.ToConfiguration(mapper.ToOptions(baseConfiguration), baseConfiguration);
 
-		Assert.Null(configuration.SourcePath);
-		Assert.Null(configuration.AllowCdnFallback);
+		Assert.Equal(@"\\server\share", configuration.SourcePath);
+		Assert.True(configuration.AllowCdnFallback);
+		Assert.Equal("16.0.17928.20156", configuration.Version);
+
+	}
+
+	[Fact]
+	public void ToConfiguration_KeepsRemoveMsiAttributesOfBase() {
+
+		var baseConfiguration = reader.Read("<Configuration><RemoveMSI All=\"True\" /></Configuration>");
+
+		var configuration = mapper.ToConfiguration(new DeploymentOptions(), baseConfiguration);
+
+		Assert.Equal("True", configuration.Root.Element(OdtNames.RemoveMsi)!.Attribute("All")!.Value);
 
 	}
 
@@ -187,7 +203,6 @@ public sealed class DeploymentOptionsMapperTests {
 			SuiteProductId = "O365BusinessRetail",
 			ProjectProductId = "ProjectProRetail",
 			Channel = ChannelIds.BetaChannel,
-			Version = "16.0.12345.20000",
 			ExcludedApps = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Teams" },
 			PrimaryLanguage = "en-us",
 			AdditionalLanguages = ["ja-jp"],
@@ -195,7 +210,7 @@ public sealed class DeploymentOptionsMapperTests {
 			AcceptEula = false,
 			MigrateArchitecture = false,
 			RemoveMsi = false,
-			ForceAppShutdown = true,
+			ForceAppShutdown = false,
 			PinIconsToTaskbar = true,
 			UpdatesEnabled = false,
 			AutoActivate = true,
@@ -209,7 +224,6 @@ public sealed class DeploymentOptionsMapperTests {
 		Assert.Equal(options.SuiteProductId, roundTrip.SuiteProductId);
 		Assert.Equal(options.ProjectProductId, roundTrip.ProjectProductId);
 		Assert.Equal(options.Channel, roundTrip.Channel);
-		Assert.Equal(options.Version, roundTrip.Version);
 		Assert.Equal(options.ExcludedApps, roundTrip.ExcludedApps);
 		Assert.Equal(options.PrimaryLanguage, roundTrip.PrimaryLanguage);
 		Assert.Equal(options.AdditionalLanguages, roundTrip.AdditionalLanguages);

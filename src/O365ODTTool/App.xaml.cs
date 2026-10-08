@@ -30,9 +30,9 @@ public partial class App : Application {
 
 		var paths = new AppPaths(AppDomain.CurrentDomain.BaseDirectory);
 		var writer = new ConfigurationWriter();
-		var setupProvider = new SetupProvider(httpClient, new AuthenticodeSignatureVerifier());
-		var deploymentService = new DeploymentService(setupProvider, new ProcessRunner(), writer, paths.ToolFolder, paths.TemporaryFolder);
-		var viewModel = new MainViewModel(new ConfigurationReader(), writer, new ConfigurationValidator(), new DeploymentOptionsMapper(), deploymentService, setupProvider, new DialogService(), paths);
+		var setupProvider = new SetupProvider(httpClient, new AuthenticodeSignatureVerifier(), paths.ToolFolder, paths.TemporaryFolder);
+		var deploymentService = new DeploymentService(setupProvider, new ProcessRunner(), writer, paths.TemporaryFolder);
+		var viewModel = new MainViewModel(new ConfigurationReader(), writer, new ConfigurationValidator(), new DeploymentOptionsMapper(), deploymentService, new DialogService(), paths);
 		var window = new MainWindow(viewModel);
 
 		MainWindow = window;

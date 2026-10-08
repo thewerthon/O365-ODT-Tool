@@ -1,4 +1,3 @@
-using System.Windows.Controls;
 using O365ODTTool.ViewModels;
 using Wpf.Ui.Appearance;
 using Wpf.Ui.Controls;
@@ -22,7 +21,5 @@ public partial class MainWindow : FluentWindow {
 		SystemThemeWatcher.Watch(this, WindowBackdropType.Mica, true);
 
 	}
-
-	private void OnLogTextChanged(object sender, TextChangedEventArgs e) => LogTextBox.ScrollToEnd();
 
 }

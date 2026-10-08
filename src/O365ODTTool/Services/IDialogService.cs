@@ -26,6 +26,11 @@ public interface IDialogService {
 	Task ShowMessageAsync(string title, string message);
 
 	/// <summary>
+	/// Shows a read-only text document.
+	/// </summary>
+	Task ShowTextAsync(string title, string text);
+
+	/// <summary>
 	/// Asks the user to confirm an action.
 	/// </summary>
 	Task<bool> ConfirmAsync(string title, string message, string confirmText);

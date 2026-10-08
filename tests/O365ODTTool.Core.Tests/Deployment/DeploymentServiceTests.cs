@@ -8,8 +8,9 @@ namespace O365ODTTool.Core.Tests.Deployment;
 
 public sealed class DeploymentServiceTests : IDisposable {
 
+	private const string setupPath = @"C:\Foo\setup.exe";
+
 	private readonly TemporaryFolder folder = new();
-	private readonly FakeSetupProvider setupProvider = new();
 	private readonly FakeProcessRunner processRunner = new();
 	private readonly ConfigurationReader reader = new();
 
@@ -21,7 +22,7 @@ public sealed class DeploymentServiceTests : IDisposable {
 		var request = Assert.Single(processRunner.Requests);
 
 		Assert.Equal(0, exitCode);
-		Assert.Equal(setupProvider.GetSetupPath(ToolFolder), request.FileName);
+		Assert.Equal(setupPath, request.FileName);
 		Assert.StartsWith("/configure \"", request.Arguments, StringComparison.Ordinal);
 		Assert.Equal("Current", reader.Read(processRunner.Configurations.Single()).Channel);
 		Assert.Empty(Directory.GetFiles(TemporaryFolder));
@@ -29,20 +30,28 @@ public sealed class DeploymentServiceTests : IDisposable {
 	}
 
 	[Fact]
-	public async Task DownloadAsync_SetsSourcePathAndPreparesOfflineFolder() {
+	public async Task InstallAsync_KeepsImportedSourcePath() {
+
+		await CreateService().InstallAsync(new OfficeConfiguration { SourcePath = @"\\server\share" }, new SynchronousProgress(), CancellationToken.None);
+
+		Assert.Equal(@"\\server\share", reader.Read(processRunner.Configurations.Single()).SourcePath);
+
+	}
+
+	[Fact]
+	public async Task DownloadAsync_RunsDownloadIntoTargetFolder() {
 
 		var target = folder.Combine("download");
 
 		var exitCode = await CreateService().DownloadAsync(new OfficeConfiguration { Channel = "Current" }, target, new SynchronousProgress(), CancellationToken.None);
 
 		var request = Assert.Single(processRunner.Requests);
-		var offlineConfiguration = reader.ReadFile(Path.Combine(target, DeploymentService.OfflineConfigurationFileName));
 
 		Assert.Equal(0, exitCode);
 		Assert.StartsWith("/download \"", request.Arguments, StringComparison.Ordinal);
 		Assert.Equal(target, reader.Read(processRunner.Configurations.Single()).SourcePath);
-		Assert.Equal(target, offlineConfiguration.SourcePath);
-		Assert.True(File.Exists(Path.Combine(target, SetupProvider.SetupFileName)));
+		Assert.True(Directory.Exists(target));
+		Assert.Empty(Directory.GetFiles(target));
 
 	}
 
@@ -58,52 +67,28 @@ public sealed class DeploymentServiceTests : IDisposable {
 	}
 
 	[Fact]
-	public async Task DownloadAsync_SkipsOfflineFolderOnFailure() {
-
-		var target = folder.Combine("download");
-
-		processRunner.ExitCode = 17002;
-
-		var exitCode = await CreateService().DownloadAsync(new OfficeConfiguration(), target, new SynchronousProgress(), CancellationToken.None);
-
-		Assert.Equal(17002, exitCode);
-		Assert.Empty(Directory.GetFiles(target));
-
-	}
-
-	[Fact]
 	public async Task InstallAsync_ReportsExitCodeDescription() {
 
 		var log = new SynchronousProgress();
 
 		processRunner.ExitCode = 17004;
 
-		await CreateService().InstallAsync(new OfficeConfiguration(), log, CancellationToken.None);
+		var exitCode = await CreateService().InstallAsync(new OfficeConfiguration(), log, CancellationToken.None);
 
+		Assert.Equal(17004, exitCode);
 		Assert.Contains(SetupExitCodes.Describe(17004), log.Messages);
 
 	}
 
 	public void Dispose() => folder.Dispose();
 
-	private string ToolFolder => folder.Combine("tool");
-
 	private string TemporaryFolder => folder.Combine("temp");
 
-	private DeploymentService CreateService() {
-
-		Directory.CreateDirectory(ToolFolder);
-		File.WriteAllBytes(setupProvider.GetSetupPath(ToolFolder), [1]);
-
-		return new DeploymentService(setupProvider, processRunner, new ConfigurationWriter(), ToolFolder, TemporaryFolder);
-
-	}
+	private DeploymentService CreateService() => new(new FakeSetupProvider(), processRunner, new ConfigurationWriter(), TemporaryFolder);
 
 	private sealed class FakeSetupProvider : ISetupProvider {
 
-		public string GetSetupPath(string folder) => Path.Combine(folder, SetupProvider.SetupFileName);
-
-		public Task<string> EnsureSetupAsync(string folder, IProgress<string> log, CancellationToken cancellationToken) => Task.FromResult(GetSetupPath(folder));
+		public Task<string> EnsureSetupAsync(IProgress<string> log, CancellationToken cancellationToken) => Task.FromResult(setupPath);
 
 	}
 

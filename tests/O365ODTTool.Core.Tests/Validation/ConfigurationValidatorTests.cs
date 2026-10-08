@@ -51,10 +51,10 @@ public sealed class ConfigurationValidatorTests {
 	[InlineData("16.0")]
 	[InlineData("15.0.1.1")]
 	[InlineData("latest")]
-	public void Validate_RejectsInvalidVersion(string version) => AssertError(mapper.ToConfiguration(new DeploymentOptions { Version = version }), "Version");
+	public void Validate_RejectsInvalidVersion(string version) => AssertError(WithVersion(version), "Version");
 
 	[Fact]
-	public void Validate_AcceptsValidVersion() => Assert.Empty(validator.Validate(mapper.ToConfiguration(new DeploymentOptions { Version = "16.0.17928.20156" })));
+	public void Validate_AcceptsValidVersion() => Assert.Empty(validator.Validate(WithVersion("16.0.17928.20156")));
 
 	[Fact]
 	public void Validate_RejectsInvalidArchitecture() => AssertError(new OfficeConfiguration { OfficeClientEdition = "86" }, "Architecture");
@@ -70,6 +70,16 @@ public sealed class ConfigurationValidatorTests {
 
 		Assert.Equal(3, issues.Count);
 		Assert.All(issues, static issue => Assert.Equal(ValidationSeverity.Warning, issue.Severity));
+
+	}
+
+	private OfficeConfiguration WithVersion(string version) {
+
+		var configuration = mapper.ToConfiguration(new DeploymentOptions());
+
+		configuration.Version = version;
+
+		return configuration;
 
 	}
 

@@ -6,13 +6,15 @@ A single-file Windows app that configures, downloads, and installs Microsoft 365
 
 All deployment choices sit in one form window that follows the Windows light or dark theme:
 
-- **Form**: architecture, products (suite, Visio, Project), channel and version, applications, languages and proofing tools, installation, updates, licensing, and general options.
-- **Import**: loads any ODT configuration XML into the form. App preferences (`AppSettings`) and any other unsupported content are preserved and passed to setup.
+- **Form**: architecture, products (Office, Visio, Project), applications, languages and proofing tools, update channel, installation, licensing, and general options.
+- **Import**: loads any ODT configuration XML into the form. Options not shown in the form (app preferences, version, source path, and so on) are preserved and passed to setup.
 - **Auto-import**: loads `O365ODTTool.xml` from the executable folder at startup.
-- **Export**: saves the configuration XML anywhere or as `O365ODTTool.xml` next to the executable.
-- **Download**: runs `setup.exe /download` into a folder and leaves `setup.exe` and `configuration.xml` there for offline installation.
-- **Install**: runs `setup.exe /configure` from the Office CDN.
-- **Setup**: downloads the official `setup.exe` next to the executable when missing and accepts only files signed by Microsoft.
+- **Export, Preview, Save**: saves the configuration XML anywhere, shows it, or saves it as `O365ODTTool.xml` next to the executable.
+- **Download**: asks for a folder and runs `setup.exe /download` into it.
+- **Install**: runs `setup.exe /configure`.
+- **Setup**: uses `setup.exe` next to the executable when present; otherwise downloads the official one into `%TEMP%\O365ODTTool`. Only files signed by Microsoft are accepted.
+
+The app stays open while setup runs, shows its result, and allows cancelling.
 
 > [!NOTE]
 > The executable requires administrator rights and the .NET Framework 4.8, which ships with Windows 10 (1903 or later) and Windows 11.

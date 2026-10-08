@@ -3,9 +3,13 @@ using System.Net.Http;
 namespace O365ODTTool.Core.Setup;
 
 /// <summary>
-/// Provides the Office Deployment Tool setup executable, downloading it from the official content delivery network when missing.
+/// Provides the Office Deployment Tool setup executable, preferring a local copy and otherwise downloading it from the official content delivery network into a cache folder.
 /// </summary>
-public sealed class SetupProvider(HttpClient httpClient, ISignatureVerifier signatureVerifier) : ISetupProvider {
+/// <param name="httpClient">The client used to download the executable.</param>
+/// <param name="signatureVerifier">The verifier of the executable signature.</param>
+/// <param name="localFolder">The folder checked first for an existing executable.</param>
+/// <param name="cacheFolder">The folder that receives the downloaded executable.</param>
+public sealed class SetupProvider(HttpClient httpClient, ISignatureVerifier signatureVerifier, string localFolder, string cacheFolder) : ISetupProvider {
 
 	/// <summary>The setup executable file name.</summary>
 	public const string SetupFileName = "setup.exe";
@@ -20,31 +24,43 @@ public sealed class SetupProvider(HttpClient httpClient, ISignatureVerifier sign
 	private const int copyBufferSize = 81920;
 
 	/// <inheritdoc />
-	public string GetSetupPath(string folder) => Path.Combine(folder, SetupFileName);
+	public async Task<string> EnsureSetupAsync(IProgress<string> log, CancellationToken cancellationToken) {
 
-	/// <inheritdoc />
-	public async Task<string> EnsureSetupAsync(string folder, IProgress<string> log, CancellationToken cancellationToken) {
+		var localPath = Path.Combine(localFolder, SetupFileName);
 
-		var setupPath = GetSetupPath(folder);
+		if (File.Exists(localPath)) return UseExisting(localPath, log);
 
-		if (File.Exists(setupPath)) {
+		var cachedPath = Path.Combine(cacheFolder, SetupFileName);
 
-			EnsureTrusted(setupPath);
-			log.Report($"Using existing {setupPath}");
+		if (File.Exists(cachedPath)) return UseExisting(cachedPath, log);
 
-			return setupPath;
+		await DownloadToAsync(cachedPath, log, cancellationToken).ConfigureAwait(false);
 
-		}
+		return cachedPath;
+
+	}
+
+	private string UseExisting(string path, IProgress<string> log) {
+
+		EnsureTrusted(path);
+		log.Report($"Using {path}");
+
+		return path;
+
+	}
+
+	private async Task DownloadToAsync(string path, IProgress<string> log, CancellationToken cancellationToken) {
 
 		log.Report($"Downloading {SetupFileName} from {DownloadUri}");
 
-		var partialPath = setupPath + partialFileExtension;
+		var partialPath = path + partialFileExtension;
 
 		try {
 
+			Directory.CreateDirectory(cacheFolder);
 			await DownloadAsync(partialPath, cancellationToken).ConfigureAwait(false);
 			EnsureTrusted(partialPath);
-			File.Move(partialPath, setupPath);
+			File.Move(partialPath, path);
 
 		} catch (Exception exception) when (exception is HttpRequestException or IOException or UnauthorizedAccessException) {
 
@@ -56,9 +72,7 @@ public sealed class SetupProvider(HttpClient httpClient, ISignatureVerifier sign
 
 		}
 
-		log.Report($"Downloaded {setupPath}");
-
-		return setupPath;
+		log.Report($"Downloaded {path}");
 
 	}
 

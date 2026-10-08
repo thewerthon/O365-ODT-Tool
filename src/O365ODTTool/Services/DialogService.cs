@@ -1,5 +1,10 @@
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
 using Microsoft.Win32;
-using Wpf.Ui.Controls;
+using MessageBox = Wpf.Ui.Controls.MessageBox;
+using MessageBoxResult = Wpf.Ui.Controls.MessageBoxResult;
+using ControlAppearance = Wpf.Ui.Controls.ControlAppearance;
 
 namespace O365ODTTool.Services;
 
@@ -12,6 +17,11 @@ public sealed class DialogService : IDialogService {
 	private const string xmlExtension = ".xml";
 	private const string closeText = "Close";
 	private const string cancelText = "Cancel";
+	private const string copyText = "Copy";
+	private const string monospaceFonts = "Cascadia Mono, Consolas";
+	private const double textDialogWidth = 820;
+	private const double textViewerHeight = 480;
+	private const double monospaceFontSize = 12;
 
 	/// <inheritdoc />
 	public string? OpenXmlFile(string initialFolder) {
@@ -55,6 +65,34 @@ public sealed class DialogService : IDialogService {
 		};
 
 		await messageBox.ShowDialogAsync();
+
+	}
+
+	/// <inheritdoc />
+	public async Task ShowTextAsync(string title, string text) {
+
+		var viewer = new TextBox {
+			Text = text,
+			IsReadOnly = true,
+			AcceptsReturn = true,
+			TextWrapping = TextWrapping.NoWrap,
+			FontFamily = new FontFamily(monospaceFonts),
+			FontSize = monospaceFontSize,
+			Height = textViewerHeight,
+			VerticalContentAlignment = VerticalAlignment.Top,
+			VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+			HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+		};
+		var messageBox = new MessageBox {
+			Title = title,
+			Content = viewer,
+			Width = textDialogWidth,
+			MaxWidth = textDialogWidth,
+			PrimaryButtonText = copyText,
+			CloseButtonText = closeText,
+		};
+
+		if (await messageBox.ShowDialogAsync() == MessageBoxResult.Primary) Clipboard.SetText(text);
 
 	}
 

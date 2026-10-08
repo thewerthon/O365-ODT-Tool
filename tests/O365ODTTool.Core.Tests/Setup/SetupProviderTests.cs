@@ -4,77 +4,101 @@ using O365ODTTool.Core.Setup;
 
 namespace O365ODTTool.Core.Tests.Setup;
 
-public sealed class SetupProviderTests {
+public sealed class SetupProviderTests : IDisposable {
 
 	private static readonly byte[] content = [1, 2, 3];
 
+	private readonly TemporaryFolder folder = new();
+
 	[Fact]
-	public async Task EnsureSetupAsync_UsesExistingTrustedFile() {
+	public async Task EnsureSetupAsync_PrefersTrustedLocalFile() {
 
-		using var folder = new TemporaryFolder();
 		var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, content);
-		var provider = new SetupProvider(new HttpClient(handler), new FakeSignatureVerifier(trusted: true));
 
-		File.WriteAllBytes(folder.Combine(SetupProvider.SetupFileName), content);
+		Directory.CreateDirectory(LocalFolder);
+		File.WriteAllBytes(LocalSetupPath, content);
 
-		var path = await provider.EnsureSetupAsync(folder.Path, new SynchronousProgress(), CancellationToken.None);
+		var path = await CreateProvider(handler, trusted: true).EnsureSetupAsync(new SynchronousProgress(), CancellationToken.None);
 
-		Assert.Equal(folder.Combine(SetupProvider.SetupFileName), path);
+		Assert.Equal(LocalSetupPath, path);
 		Assert.Equal(0, handler.RequestCount);
 
 	}
 
 	[Fact]
-	public async Task EnsureSetupAsync_RejectsExistingUntrustedFile() {
+	public async Task EnsureSetupAsync_UsesCachedFile() {
 
-		using var folder = new TemporaryFolder();
-		var provider = new SetupProvider(new HttpClient(new FakeHttpMessageHandler(HttpStatusCode.OK, content)), new FakeSignatureVerifier(trusted: false));
+		var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, content);
 
-		File.WriteAllBytes(folder.Combine(SetupProvider.SetupFileName), content);
+		Directory.CreateDirectory(CacheFolder);
+		File.WriteAllBytes(CachedSetupPath, content);
 
-		await Assert.ThrowsAsync<SetupException>(() => provider.EnsureSetupAsync(folder.Path, new SynchronousProgress(), CancellationToken.None));
+		var path = await CreateProvider(handler, trusted: true).EnsureSetupAsync(new SynchronousProgress(), CancellationToken.None);
+
+		Assert.Equal(CachedSetupPath, path);
+		Assert.Equal(0, handler.RequestCount);
 
 	}
 
 	[Fact]
-	public async Task EnsureSetupAsync_DownloadsMissingFile() {
+	public async Task EnsureSetupAsync_RejectsUntrustedLocalFile() {
 
-		using var folder = new TemporaryFolder();
+		Directory.CreateDirectory(LocalFolder);
+		File.WriteAllBytes(LocalSetupPath, content);
+
+		var provider = CreateProvider(new FakeHttpMessageHandler(HttpStatusCode.OK, content), trusted: false);
+
+		await Assert.ThrowsAsync<SetupException>(() => provider.EnsureSetupAsync(new SynchronousProgress(), CancellationToken.None));
+
+	}
+
+	[Fact]
+	public async Task EnsureSetupAsync_DownloadsMissingFileIntoCache() {
+
 		var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, content);
-		var verifier = new FakeSignatureVerifier(trusted: true);
-		var provider = new SetupProvider(new HttpClient(handler), verifier);
 
-		var path = await provider.EnsureSetupAsync(folder.Path, new SynchronousProgress(), CancellationToken.None);
+		var path = await CreateProvider(handler, trusted: true).EnsureSetupAsync(new SynchronousProgress(), CancellationToken.None);
 
+		Assert.Equal(CachedSetupPath, path);
 		Assert.Equal(content, File.ReadAllBytes(path));
 		Assert.Equal(1, handler.RequestCount);
-		Assert.Single(verifier.VerifiedPaths);
-		Assert.Single(Directory.GetFiles(folder.Path));
+		Assert.Single(Directory.GetFiles(CacheFolder));
+		Assert.False(Directory.Exists(LocalFolder));
 
 	}
 
 	[Fact]
 	public async Task EnsureSetupAsync_DiscardsUntrustedDownload() {
 
-		using var folder = new TemporaryFolder();
-		var provider = new SetupProvider(new HttpClient(new FakeHttpMessageHandler(HttpStatusCode.OK, content)), new FakeSignatureVerifier(trusted: false));
+		var provider = CreateProvider(new FakeHttpMessageHandler(HttpStatusCode.OK, content), trusted: false);
 
-		await Assert.ThrowsAsync<SetupException>(() => provider.EnsureSetupAsync(folder.Path, new SynchronousProgress(), CancellationToken.None));
+		await Assert.ThrowsAsync<SetupException>(() => provider.EnsureSetupAsync(new SynchronousProgress(), CancellationToken.None));
 
-		Assert.Empty(Directory.GetFiles(folder.Path));
+		Assert.Empty(Directory.GetFiles(CacheFolder));
 
 	}
 
 	[Fact]
 	public async Task EnsureSetupAsync_WrapsHttpFailures() {
 
-		using var folder = new TemporaryFolder();
-		var provider = new SetupProvider(new HttpClient(new FakeHttpMessageHandler(HttpStatusCode.NotFound, [])), new FakeSignatureVerifier(trusted: true));
+		var provider = CreateProvider(new FakeHttpMessageHandler(HttpStatusCode.NotFound, []), trusted: true);
 
-		await Assert.ThrowsAsync<SetupException>(() => provider.EnsureSetupAsync(folder.Path, new SynchronousProgress(), CancellationToken.None));
+		await Assert.ThrowsAsync<SetupException>(() => provider.EnsureSetupAsync(new SynchronousProgress(), CancellationToken.None));
 
-		Assert.Empty(Directory.GetFiles(folder.Path));
+		Assert.Empty(Directory.GetFiles(CacheFolder));
 
 	}
+
+	public void Dispose() => folder.Dispose();
+
+	private string LocalFolder => folder.Combine("local");
+
+	private string CacheFolder => folder.Combine("cache");
+
+	private string LocalSetupPath => Path.Combine(LocalFolder, SetupProvider.SetupFileName);
+
+	private string CachedSetupPath => Path.Combine(CacheFolder, SetupProvider.SetupFileName);
+
+	private SetupProvider CreateProvider(FakeHttpMessageHandler handler, bool trusted) => new(new HttpClient(handler), new FakeSignatureVerifier(trusted), LocalFolder, CacheFolder);
 
 }

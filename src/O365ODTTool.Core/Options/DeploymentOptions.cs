@@ -31,9 +31,6 @@ public sealed class DeploymentOptions {
 	/// <summary>Gets or sets the channel identifier.</summary>
 	public string Channel { get; set; } = ChannelIds.Current;
 
-	/// <summary>Gets or sets the version to deploy, or <see langword="null"/> for the latest one.</summary>
-	public string? Version { get; set; }
-
 	/// <summary>Gets or sets the excluded application identifiers.</summary>
 	public ISet<string> ExcludedApps { get; set; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { AppIds.Bing, AppIds.Groove, AppIds.Lync };
 
@@ -59,7 +56,7 @@ public sealed class DeploymentOptions {
 	public bool RemoveMsi { get; set; } = true;
 
 	/// <summary>Gets or sets whether running applications are closed during setup.</summary>
-	public bool ForceAppShutdown { get; set; }
+	public bool ForceAppShutdown { get; set; } = true;
 
 	/// <summary>Gets or sets whether application shortcuts are pinned to the taskbar.</summary>
 	public bool PinIconsToTaskbar { get; set; }

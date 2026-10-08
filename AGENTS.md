@@ -22,14 +22,16 @@ WPF app that edits Office Deployment Tool (ODT) configurations in a single form 
   - **`Deployment`**: orchestrates the `/download` and `/configure` runs.
 - **`src/O365ODTTool`**: MVVM with CommunityToolkit.Mvvm and the WPF-UI theme.
   - **Composition root**: `App.xaml.cs` creates the services by hand, without a DI container.
-  - **`MainViewModel`**: coordinates files, setup runs, the log, and the XML preview.
+  - **`MainViewModel`**: coordinates files, setup runs, and dialogs.
   - **`DeploymentFormViewModel`**: holds the form fields.
+  - **`Controls`**: reusable controls, such as the multi-select drop-down.
+  - **`Assets`**: the application icon.
 - **`tests/O365ODTTool.Core.Tests`**: xUnit tests for the core library. Fixtures live in `Fixtures/`.
 
 ## Rules
 
 - MUST keep the user interface a single form with no wizard or multi-step flow.
-- MUST keep installation sourced from the CDN. Only download sets `SourcePath`.
-- MUST NOT show app preferences (`AppSettings/User`) in the form. They MUST be preserved from the imported XML.
+- MUST preserve every option not shown in the form (for example `AppSettings/User`, `Version`, `SourcePath`, `Logging`) exactly as imported. Only download overrides `SourcePath`, on a copy.
+- MUST NOT expose implementation details (setup executable, CDN, temporary files) in labels, tooltips, or messages.
 - MUST put new logic in Core with tests; view models only bind and coordinate.
 - MUST validate with `dotnet test` and `dotnet publish src\O365ODTTool -c Release -o publish`.

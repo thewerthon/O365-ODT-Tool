@@ -19,7 +19,7 @@ public static class SetupExitCodes {
 	/// </summary>
 	public static string Describe(int exitCode) {
 
-		var description = descriptions.TryGetValue(exitCode, out var known) ? known : "Setup failed; check the setup logs in the %TEMP% folder.";
+		var description = descriptions.TryGetValue(exitCode, out var known) ? known : "Setup failed.";
 
 		return $"Exit code {exitCode}: {description}";
 

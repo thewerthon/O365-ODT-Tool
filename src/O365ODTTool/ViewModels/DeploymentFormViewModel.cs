@@ -12,6 +12,7 @@ namespace O365ODTTool.ViewModels;
 public sealed partial class DeploymentFormViewModel : ObservableObject {
 
 	private const string noneDisplayName = "None";
+	private const string summarySeparator = ", ";
 
 	private bool isLoading;
 
@@ -99,14 +100,6 @@ public sealed partial class DeploymentFormViewModel : ObservableObject {
 	[ObservableProperty]
 	public partial string? Channel { get; set; }
 
-	/// <summary>Gets or sets whether a specific version is deployed instead of the latest one.</summary>
-	[ObservableProperty]
-	public partial bool IsSpecificVersion { get; set; }
-
-	/// <summary>Gets or sets the specific version.</summary>
-	[ObservableProperty]
-	public partial string? Version { get; set; }
-
 	/// <summary>Gets or sets the primary language identifier.</summary>
 	[ObservableProperty]
 	public partial string? PrimaryLanguage { get; set; }
@@ -151,6 +144,12 @@ public sealed partial class DeploymentFormViewModel : ObservableObject {
 	[ObservableProperty]
 	public partial string? Description { get; set; }
 
+	/// <summary>Gets whether every application is selected, or <see langword="null"/> when only some are; setting it selects every application unless all already are, in which case it clears them.</summary>
+	public bool? AllAppsSelected {
+		get => Apps.All(static app => app.IsSelected) ? true : Apps.Any(static app => app.IsSelected) ? null : false;
+		set => SelectAllApps(AllAppsSelected != true);
+	}
+
 	/// <summary>Gets a summary of the selected additional languages.</summary>
 	public string AdditionalLanguagesSummary => Summarize(AdditionalLanguages);
 
@@ -184,8 +183,6 @@ public sealed partial class DeploymentFormViewModel : ObservableObject {
 			ProjectProductId = options.ProjectProductId;
 			ProjectProductKey = options.ProjectProductKey;
 			Channel = options.Channel;
-			IsSpecificVersion = options.Version is not null;
-			Version = options.Version;
 			PrimaryLanguage = EnsurePrimaryLanguageOption(options.PrimaryLanguage);
 			DisplayLevel = options.DisplayLevel;
 			AcceptEula = options.AcceptEula;
@@ -209,7 +206,7 @@ public sealed partial class DeploymentFormViewModel : ObservableObject {
 
 		}
 
-		NotifySummariesChanged();
+		NotifyItemsChanged();
 
 	}
 
@@ -226,10 +223,9 @@ public sealed partial class DeploymentFormViewModel : ObservableObject {
 		ProjectProductId = ProjectProductId,
 		ProjectProductKey = IsProjectVolume ? ProjectProductKey : null,
 		Channel = Channel ?? ChannelIds.Current,
-		Version = IsSpecificVersion ? Version : null,
 		PrimaryLanguage = PrimaryLanguage ?? LanguageIds.BrazilianPortuguese,
-		AdditionalLanguages = SelectedIds(AdditionalLanguages),
-		ProofingLanguages = SelectedIds(ProofingLanguages),
+		AdditionalLanguages = SelectedItems(AdditionalLanguages).Select(static item => item.Id).ToList(),
+		ProofingLanguages = SelectedItems(ProofingLanguages).Select(static item => item.Id).ToList(),
 		ExcludedApps = new HashSet<string>(Apps.Where(static app => !app.IsSelected).Select(static app => app.Id), StringComparer.OrdinalIgnoreCase),
 		DisplayLevel = DisplayLevel,
 		AcceptEula = AcceptEula,
@@ -259,7 +255,15 @@ public sealed partial class DeploymentFormViewModel : ObservableObject {
 		.. ProductCatalog.OfCategory(category).Select(static product => new OptionItem(product.Id, product.DisplayName)),
 	];
 
-	private static List<string> SelectedIds(IEnumerable<SelectableItem> items) => items.Where(static item => item.IsSelected).Select(static item => item.Id).ToList();
+	private static IEnumerable<SelectableItem> SelectedItems(IEnumerable<SelectableItem> items) => items.Where(static item => item.IsSelected);
+
+	private static string Summarize(IEnumerable<SelectableItem> items) {
+
+		var names = SelectedItems(items).Select(static item => item.DisplayName).ToList();
+
+		return names.Count == 0 ? noneDisplayName : string.Join(summarySeparator, names);
+
+	}
 
 	private static void Select(ObservableCollection<SelectableItem> items, IEnumerable<string> ids) {
 
@@ -305,18 +309,35 @@ public sealed partial class DeploymentFormViewModel : ObservableObject {
 
 	}
 
-	private static string Summarize(IEnumerable<SelectableItem> items) {
+	private void SelectAllApps(bool selected) {
 
-		var selected = SelectedIds(items);
+		isLoading = true;
 
-		return selected.Count == 0 ? "None selected" : $"Selected: {string.Join(", ", selected)}";
+		try {
+
+			foreach (var app in Apps) app.IsSelected = selected;
+
+		} finally {
+
+			isLoading = false;
+
+		}
+
+		NotifyItemsChanged();
 
 	}
 
-	private void OnItemChanged(object? sender, PropertyChangedEventArgs e) => NotifySummariesChanged();
+	private void OnItemChanged(object? sender, PropertyChangedEventArgs e) {
 
-	private void NotifySummariesChanged() {
+		if (isLoading) return;
 
+		NotifyItemsChanged();
+
+	}
+
+	private void NotifyItemsChanged() {
+
+		OnPropertyChanged(nameof(AllAppsSelected));
 		OnPropertyChanged(nameof(AdditionalLanguagesSummary));
 		OnPropertyChanged(nameof(ProofingLanguagesSummary));
 
