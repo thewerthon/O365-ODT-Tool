@@ -46,6 +46,68 @@ public sealed class DeploymentServiceTests : IDisposable {
 	}
 
 	[Fact]
+	public async Task InstallAsync_WithoutDownloadedFiles_UsesConfigurationAsIs() {
+
+		await CreateService().InstallAsync(new OfficeConfiguration { Channel = "Current" }, new SynchronousProgress(), CancellationToken.None);
+
+		var configuration = reader.Read(processRunner.Configurations.Single());
+
+		Assert.Null(configuration.SourcePath);
+		Assert.Null(configuration.AllowCdnFallback);
+
+	}
+
+	[Fact]
+	public async Task InstallAsync_ReusesDownloadedFilesWithFallback() {
+
+		CreateDownloadedFiles();
+
+		var input = new OfficeConfiguration { Channel = "Current" };
+
+		await CreateService().InstallAsync(input, new SynchronousProgress(), CancellationToken.None);
+
+		var configuration = reader.Read(processRunner.Configurations.Single());
+
+		Assert.Equal(ToolFolder, configuration.SourcePath);
+		Assert.True(configuration.AllowCdnFallback);
+		Assert.Null(input.SourcePath);
+
+	}
+
+	[Fact]
+	public async Task InstallAsync_KeepsImportedFallbackChoice() {
+
+		CreateDownloadedFiles();
+
+		await CreateService().InstallAsync(new OfficeConfiguration { AllowCdnFallback = false }, new SynchronousProgress(), CancellationToken.None);
+
+		Assert.False(reader.Read(processRunner.Configurations.Single()).AllowCdnFallback);
+
+	}
+
+	[Fact]
+	public async Task InstallAsync_PrefersImportedSourcePathOverDownloadedFiles() {
+
+		CreateDownloadedFiles();
+
+		await CreateService().InstallAsync(new OfficeConfiguration { SourcePath = @"\\server\share" }, new SynchronousProgress(), CancellationToken.None);
+
+		Assert.Equal(@"\\server\share", reader.Read(processRunner.Configurations.Single()).SourcePath);
+
+	}
+
+	[Fact]
+	public async Task InstallAsync_IgnoresEmptyDownloadFolder() {
+
+		Directory.CreateDirectory(Path.Combine(ToolFolder, DeploymentService.DownloadedFilesFolder));
+
+		await CreateService().InstallAsync(new OfficeConfiguration(), new SynchronousProgress(), CancellationToken.None);
+
+		Assert.Null(reader.Read(processRunner.Configurations.Single()).SourcePath);
+
+	}
+
+	[Fact]
 	public async Task DownloadAsync_RunsDownloadIntoTargetFolder() {
 
 		var target = folder.Combine("download");
@@ -124,7 +186,16 @@ public sealed class DeploymentServiceTests : IDisposable {
 
 	private string TemporaryFolder => folder.Combine("temp");
 
-	private DeploymentService CreateService() => new(new FakeSetupProvider(SetupPath), processRunner, new ConfigurationWriter(), TemporaryFolder);
+	private DeploymentService CreateService() => new(new FakeSetupProvider(SetupPath), processRunner, new ConfigurationWriter(), TemporaryFolder, ToolFolder);
+
+	private void CreateDownloadedFiles() {
+
+		var filesFolder = Path.Combine(ToolFolder, DeploymentService.DownloadedFilesFolder);
+
+		Directory.CreateDirectory(filesFolder);
+		File.WriteAllBytes(Path.Combine(filesFolder, "v64.cab"), [1]);
+
+	}
 
 	private sealed class FakeSetupProvider(string path) : ISetupProvider {
 

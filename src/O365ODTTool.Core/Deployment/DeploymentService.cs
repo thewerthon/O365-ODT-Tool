@@ -11,7 +11,11 @@ namespace O365ODTTool.Core.Deployment;
 /// <param name="processRunner">The process runner.</param>
 /// <param name="writer">The configuration writer.</param>
 /// <param name="temporaryFolder">The folder that holds the transient configuration files.</param>
-public sealed class DeploymentService(ISetupProvider setupProvider, IProcessRunner processRunner, IConfigurationWriter writer, string temporaryFolder) : IDeploymentService {
+/// <param name="localSourceFolder">The folder whose previously downloaded files are reused by installations.</param>
+public sealed class DeploymentService(ISetupProvider setupProvider, IProcessRunner processRunner, IConfigurationWriter writer, string temporaryFolder, string localSourceFolder) : IDeploymentService {
+
+	/// <summary>The relative path of the installation files inside a download folder.</summary>
+	public static readonly string DownloadedFilesFolder = Path.Combine("Office", "Data");
 
 	/// <summary>The configuration file name written into download folders.</summary>
 	public const string OfflineConfigurationFileName = "configuration.xml";
@@ -53,7 +57,31 @@ public sealed class DeploymentService(ISetupProvider setupProvider, IProcessRunn
 
 		var setupPath = await setupProvider.EnsureSetupAsync(log, cancellationToken).ConfigureAwait(false);
 
-		return await RunAsync(setupPath, SetupMode.Configure, configuration, log, cancellationToken).ConfigureAwait(false);
+		return await RunAsync(setupPath, SetupMode.Configure, WithLocalSource(configuration, log), log, cancellationToken).ConfigureAwait(false);
+
+	}
+
+	private static bool HasDownloadedFiles(string folder) {
+
+		var filesFolder = Path.Combine(folder, DownloadedFilesFolder);
+
+		return Directory.Exists(filesFolder) && Directory.EnumerateFileSystemEntries(filesFolder).Any();
+
+	}
+
+	// Reuses files downloaded next to the tool, while the content delivery network supplies anything they lack; an imported source path always wins.
+	private OfficeConfiguration WithLocalSource(OfficeConfiguration configuration, IProgress<string> log) {
+
+		if (configuration.SourcePath is not null || !HasDownloadedFiles(localSourceFolder)) return configuration;
+
+		var localConfiguration = configuration.Clone();
+
+		localConfiguration.SourcePath = localSourceFolder;
+		localConfiguration.AllowCdnFallback ??= true;
+
+		log.Report($"Installing from downloaded files in {localSourceFolder}");
+
+		return localConfiguration;
 
 	}
 
