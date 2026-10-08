@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using O365ODTTool.Core.Setup;
 
 namespace O365ODTTool.Core.Tests.Setup;
@@ -22,13 +23,16 @@ public sealed class ProcessRunnerTests {
 	}
 
 	[Fact]
-	public async Task RunAsync_TerminatesOnCancellation() {
+	public async Task RunAsync_TerminatesProcessTreeQuicklyOnCancellation() {
 
 		using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
 
-		var request = new ProcessRequest(commandProcessor, "/c ping -n 30 127.0.0.1 >nul", Path.GetTempPath());
+		var request = new ProcessRequest(commandProcessor, "/c ping -n 30 127.0.0.1", Path.GetTempPath());
+		var stopwatch = Stopwatch.StartNew();
 
 		await Assert.ThrowsAnyAsync<OperationCanceledException>(() => runner.RunAsync(request, new SynchronousProgress(), cancellation.Token));
+
+		Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(10), $"Cancellation took {stopwatch.Elapsed}.");
 
 	}
 

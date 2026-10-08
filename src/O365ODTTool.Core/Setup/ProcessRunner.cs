@@ -8,6 +8,9 @@ namespace O365ODTTool.Core.Setup;
 /// </summary>
 public sealed class ProcessRunner : IProcessRunner {
 
+	private const string treeKillerFileName = "taskkill.exe";
+	private const string treeKillerArgumentsFormat = "/PID {0} /T /F";
+
 	/// <inheritdoc />
 	public async Task<int> RunAsync(ProcessRequest request, IProgress<string> output, CancellationToken cancellationToken) {
 
@@ -21,16 +24,16 @@ public sealed class ProcessRunner : IProcessRunner {
 
 		Start(process, request);
 
-		using (cancellationToken.Register(() => Kill(process))) {
+		using (cancellationToken.Register(() => Task.Run(() => KillTree(process)))) {
 
 			await exited.Task.ConfigureAwait(false);
 
 		}
 
-		// Flushes the asynchronous output readers before the exit code is read.
-		process.WaitForExit();
-
+		// Waiting for the output to drain would block on child processes that inherited it, so a cancelled run returns right away.
 		cancellationToken.ThrowIfCancellationRequested();
+
+		process.WaitForExit();
 
 		return process.ExitCode;
 
@@ -81,9 +84,19 @@ public sealed class ProcessRunner : IProcessRunner {
 
 	}
 
-	private static void Kill(Process process) {
+	// Setup delegates the work to child processes, so terminating only the parent would leave them running.
+	private static void KillTree(Process process) {
 
 		try {
+
+			if (process.HasExited) return;
+
+			using var killer = Process.Start(new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, treeKillerFileName), string.Format(treeKillerArgumentsFormat, process.Id)) {
+				UseShellExecute = false,
+				CreateNoWindow = true,
+			});
+
+			killer?.WaitForExit();
 
 			if (!process.HasExited) process.Kill();
 

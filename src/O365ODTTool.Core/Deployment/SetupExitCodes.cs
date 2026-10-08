@@ -1,27 +1,31 @@
 namespace O365ODTTool.Core.Deployment;
 
 /// <summary>
-/// Describes the exit codes returned by setup.
+/// Describes the exit codes returned by setup in user-facing terms.
 /// </summary>
 public static class SetupExitCodes {
 
 	/// <summary>The success exit code.</summary>
 	public const int Success = 0;
 
-	private static readonly Dictionary<int, string> descriptions = new() {
-		[Success] = "Completed successfully.",
-		[17002] = "Setup could not complete; another installation may be running, setup was cancelled, or the files are incomplete.",
-		[17004] = "The requested products or languages are not available for the selected channel or version.",
+	private const string successDescription = "Completed successfully.";
+	private const string unknownFailureDescription = "The operation failed.";
+
+	private static readonly Dictionary<int, string> failureDescriptions = new() {
+		[17002] = "The operation could not complete. Another installation may be running, or it was cancelled.",
+		[17004] = "The selected products or languages are not available for the selected channel.",
 	};
 
 	/// <summary>
-	/// Describes an exit code.
+	/// Describes an exit code; failures include the code so they can be looked up.
 	/// </summary>
 	public static string Describe(int exitCode) {
 
-		var description = descriptions.TryGetValue(exitCode, out var known) ? known : "Setup failed.";
+		if (exitCode == Success) return successDescription;
 
-		return $"Exit code {exitCode}: {description}";
+		var description = failureDescriptions.TryGetValue(exitCode, out var known) ? known : unknownFailureDescription;
+
+		return $"{description} (error {exitCode})";
 
 	}
 
