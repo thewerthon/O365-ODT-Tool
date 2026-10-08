@@ -71,7 +71,7 @@ public sealed partial class DeploymentFormViewModel : ObservableObject {
 
 	/// <summary>Gets or sets the suite identifier.</summary>
 	[ObservableProperty]
-	[NotifyPropertyChangedFor(nameof(IsSuiteVolume))]
+	[NotifyPropertyChangedFor(nameof(IsSuiteVolume), nameof(HasSuite))]
 	public partial string? SuiteProductId { get; set; }
 
 	/// <summary>Gets or sets the suite product key.</summary>
@@ -155,6 +155,9 @@ public sealed partial class DeploymentFormViewModel : ObservableObject {
 
 	/// <summary>Gets a summary of the selected proofing tools languages.</summary>
 	public string ProofingLanguagesSummary => Summarize(ProofingLanguages);
+
+	/// <summary>Gets whether a suite is selected, which is required to choose its applications.</summary>
+	public bool HasSuite => !string.IsNullOrWhiteSpace(SuiteProductId);
 
 	/// <summary>Gets whether the selected suite is a volume product.</summary>
 	public bool IsSuiteVolume => IsVolume(SuiteProductId);

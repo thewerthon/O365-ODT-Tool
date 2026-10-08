@@ -59,6 +59,40 @@ public sealed class DeploymentOptionsMapperTests {
 	}
 
 	[Fact]
+	public void ToConfiguration_ExcludesAppsFromSuiteOnly() {
+
+		var options = new DeploymentOptions { VisioProductId = "VisioProRetail", ProjectProductId = "ProjectProRetail" };
+
+		var products = mapper.ToConfiguration(options).Products;
+
+		Assert.NotEmpty(products[0].ExcludedApps);
+		Assert.Empty(products[1].ExcludedApps);
+		Assert.Empty(products[2].ExcludedApps);
+
+	}
+
+	[Fact]
+	public void ToConfiguration_WithoutSuite_WritesNoExcludedApps() {
+
+		var options = new DeploymentOptions { SuiteProductId = null, VisioProductId = "VisioProRetail", ExcludedApps = new HashSet<string> { "Word" } };
+
+		Assert.Empty(Assert.Single(mapper.ToConfiguration(options).Products).ExcludedApps);
+
+	}
+
+	[Fact]
+	public void ToOptions_ReadsExcludedAppsFromSuite() {
+
+		var configuration = new OfficeConfiguration();
+
+		configuration.AddProduct(new ProductEntry("VisioProRetail", ["en-us"], ["Teams"]));
+		configuration.AddProduct(new ProductEntry(ProductIds.Microsoft365AppsForEnterprise, ["en-us"], ["Word"]));
+
+		Assert.Equal(new HashSet<string> { "Word" }, mapper.ToOptions(configuration).ExcludedApps);
+
+	}
+
+	[Fact]
 	public void ToConfiguration_WithoutSuite_OmitsIt() {
 
 		var options = new DeploymentOptions { SuiteProductId = null, VisioProductId = "VisioProRetail" };

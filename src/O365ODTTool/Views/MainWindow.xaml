@@ -130,7 +130,7 @@
 					</Border>
 
 					<Border Style="{StaticResource Card}">
-						<StackPanel>
+						<StackPanel IsEnabled="{Binding HasSuite}">
 							<Grid>
 								<TextBlock Style="{StaticResource CardTitle}" Text="Applications" />
 								<CheckBox Content="All" IsChecked="{Binding AllAppsSelected}" HorizontalAlignment="Right" MinWidth="0" Margin="0,0,8,6" />

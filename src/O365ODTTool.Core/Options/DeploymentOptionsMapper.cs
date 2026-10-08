@@ -37,7 +37,7 @@ public sealed class DeploymentOptionsMapper : IDeploymentOptionsMapper {
 			ProjectProductId = project?.Id,
 			ProjectProductKey = project?.ProductKey,
 			Channel = ChannelCatalog.Find(configuration.Channel)?.Id ?? ProductCatalog.Find(primaryProduct?.Id)?.RequiredChannel ?? defaults.Channel,
-			ExcludedApps = primaryProduct is null ? defaults.ExcludedApps : new HashSet<string>(primaryProduct.ExcludedApps.Select(NormalizeApp), StringComparer.OrdinalIgnoreCase),
+			ExcludedApps = suite is null ? defaults.ExcludedApps : new HashSet<string>(suite.ExcludedApps.Select(NormalizeApp), StringComparer.OrdinalIgnoreCase),
 			PrimaryLanguage = languages.FirstOrDefault() ?? defaults.PrimaryLanguage,
 			AdditionalLanguages = languages.Skip(1).ToList(),
 			ProofingLanguages = proofing?.Languages.Select(NormalizeLanguage).ToList() ?? [],
@@ -124,17 +124,17 @@ public sealed class DeploymentOptionsMapper : IDeploymentOptionsMapper {
 
 		var languages = new[] { options.PrimaryLanguage }.Concat(options.AdditionalLanguages).Where(static id => !string.IsNullOrWhiteSpace(id)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 		var excludedApps = options.ExcludedApps.OrderBy(GetAppOrder).ThenBy(static id => id, StringComparer.OrdinalIgnoreCase).ToList();
-		var selections = new[] {
-			(Id: options.SuiteProductId, Key: options.SuiteProductKey),
-			(Id: options.VisioProductId, Key: options.VisioProductKey),
-			(Id: options.ProjectProductId, Key: options.ProjectProductKey),
+		var selections = new (string? Id, string? Key, IReadOnlyList<string> ExcludedApps)[] {
+			(options.SuiteProductId, options.SuiteProductKey, excludedApps),
+			(options.VisioProductId, options.VisioProductKey, []),
+			(options.ProjectProductId, options.ProjectProductKey, []),
 		};
 
-		foreach (var (id, key) in selections) {
+		foreach (var (id, key, productExcludedApps) in selections) {
 
 			if (string.IsNullOrWhiteSpace(id)) continue;
 
-			configuration.AddProduct(new ProductEntry(id!, languages, excludedApps, NullIfBlank(key)));
+			configuration.AddProduct(new ProductEntry(id!, languages, productExcludedApps, NullIfBlank(key)));
 
 		}
 
