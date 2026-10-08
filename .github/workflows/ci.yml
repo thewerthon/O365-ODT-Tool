@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Test
+        run: dotnet test --configuration Release
+
+      - name: Publish
+        run: dotnet publish src/O365ODTTool --configuration Release --output publish
+
+      - name: Upload Executable
+        uses: actions/upload-artifact@v7
+        with:
+          name: O365ODTTool
+          path: publish/O365ODTTool.exe
+          if-no-files-found: error

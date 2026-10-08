@@ -27,11 +27,14 @@ WPF app that edits Office Deployment Tool (ODT) configurations in a single form 
   - **`Controls`**: reusable controls, such as the multi-select drop-down.
   - **`Assets`**: the application icon.
 - **`tests/O365ODTTool.Core.Tests`**: xUnit tests for the core library. Fixtures live in `Fixtures/`.
+- **`.github/workflows`**: `ci.yml` builds, tests, and uploads the executable on pushes and pull requests to `main`; `release.yml` publishes a GitHub release with the executable and its checksum when a `vMAJOR.MINOR.PATCH` tag is pushed. The tag sets the assembly version.
+- **`.github/assets`**: images referenced by `README.md`.
 
 ## Rules
 
 - MUST keep the user interface a single form with no wizard or multi-step flow.
-- MUST preserve every option not shown in the form (for example `AppSettings/User`, `Version`, `SourcePath`, `Logging`) exactly as imported. Only download overrides `SourcePath`, on a copy.
+- MUST preserve every option not shown in the form (for example `AppSettings/User`, `Version`, `SourcePath`, `Logging`) exactly as imported. Only download and install-from-downloaded-files override `SourcePath`, on a copy.
+- MUST keep downloads in `Office\Data` next to the executable; setup requires that layout.
 - MUST NOT expose implementation details (setup executable, CDN, temporary files) in labels, tooltips, or messages.
 - MUST put new logic in Core with tests; view models only bind and coordinate.
 - MUST validate with `dotnet test` and `dotnet publish src\O365ODTTool -c Release -o publish`.

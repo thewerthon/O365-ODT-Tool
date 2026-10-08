@@ -1,0 +1,67 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to release (for example, v1.2.3)
+        required: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and Publish Release
+    runs-on: windows-latest
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Resolve Version
+        shell: pwsh
+        run: |
+          if ($env:TAG -notmatch '^v(\d+\.\d+\.\d+)$') { throw "Tag '$env:TAG' must follow the vMAJOR.MINOR.PATCH format." }
+          "VERSION=$($Matches[1])" >> $env:GITHUB_ENV
+
+      - name: Test
+        run: dotnet test --configuration Release
+
+      - name: Publish
+        run: dotnet publish src/O365ODTTool --configuration Release --output publish -p:Version=${{ env.VERSION }}
+
+      - name: Create Checksum
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash -Path publish/O365ODTTool.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  O365ODTTool.exe" | Set-Content -Path publish/O365ODTTool.exe.sha256 -NoNewline
+
+      - name: Publish Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $assets = 'publish/O365ODTTool.exe', 'publish/O365ODTTool.exe.sha256'
+          gh release view $env:TAG --repo ${{ github.repository }} *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $env:TAG @assets --repo ${{ github.repository }} --clobber
+          } else {
+            gh release create $env:TAG @assets --repo ${{ github.repository }} --title $env:TAG --generate-notes
+          }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
