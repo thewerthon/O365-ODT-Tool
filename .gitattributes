@@ -12,3 +12,6 @@
 *.cs linguist-detectable
 *.ps1 linguist-detectable
 *.xaml linguist-detectable
+
+# Linguist Documentation
+.github/assets/* linguist-documentation
